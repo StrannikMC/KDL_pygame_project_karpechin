@@ -102,6 +102,39 @@ class Background:
         DISPLAYSURF.blit(self.bgimage, (self.bgX2, self.bgY2))
 
 
+class Button():
+    def __init__(self, image, pos, text_input, font, base_color, hovering_color):
+        self.image = image
+        self.x_pos = pos[0]
+        self.y_pos = pos[1]
+        self.font = font
+        self.base_color, self.hovering_color = base_color, hovering_color
+        self.text_input = text_input
+        self.text = self.font.render(self.text_input, True, self.base_color)
+        if self.image is None:
+            self.image = self.text
+        self.rect = self.image.get_rect(center=(self.x_pos, self.y_pos))
+        self.text_rect = self.text.get_rect(center=(self.x_pos, self.y_pos))
+
+    def update(self, screen):
+        if self.image is not None:
+            screen.blit(self.image, self.rect)
+        screen.blit(self.text, self.text_rect)
+
+    def checkForInput(self, position):
+        if position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top,
+                                                                                          self.rect.bottom):
+            return True
+        return False
+
+    def changeColor(self, position):
+        if position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top,
+                                                                                          self.rect.bottom):
+            self.text = self.font.render(self.text_input, True, self.hovering_color)
+        else:
+            self.text = self.font.render(self.text_input, True, self.base_color)
+
+
 # Загружаем объекты
 P1 = Player()
 E1 = Enemy()
@@ -118,42 +151,82 @@ all_sprites.add(E1)
 INC_SPEED = pygame.USEREVENT + 1
 pygame.time.set_timer(INC_SPEED, 1000)
 
-# основной цикл
-while True:
 
-    # проходим по всем событиям, при возникновении события quit завершаем игру
-    for event in pygame.event.get():
-        if event.type == INC_SPEED:
-            SPEED += 0.5
-        if event.type == QUIT:
-            pygame.quit()
-            sys.exit()
+def main_menu():
+    while True:
+        DISPLAYSURF.fill(WHITE)
 
-    # отрисовываем текст используя рендер шрифта, обновляем каждый тик
-    back_ground.update()
-    back_ground.render()
-    scores = font_small.render(str(SCORE), True, BLACK)
-    DISPLAYSURF.blit(scores, (10, 10))
+        MENU_MOUSE_POS = pygame.mouse.get_pos()
 
-    # перерисовываем спрайты по их перемещению
-    for entity in all_sprites:
-        DISPLAYSURF.blit(entity.image, entity.rect)
-        entity.move()
+        MENU_TEXT = font.render("МЕНЮ", True, "#b68f40")
+        MENU_RECT = MENU_TEXT.get_rect(center=(200, 100))
 
-    # проверяем столкновение, если столкновение произошло, проигрываем звук проигрыша и окно завершения
-    if pygame.sprite.spritecollideany(P1, enemies):
-        pygame.mixer.Sound('crash.wav').play()
-        time.sleep(0.5)
+        PLAY_BUTTON = Button(image=pygame.image.load("Play Rect.png"), pos=(200, 250),
+                             text_input="ИГРАТЬ", font=font, base_color="#d7fcd4", hovering_color="White")
 
-        DISPLAYSURF.fill(RED)
-        DISPLAYSURF.blit(game_over, (30, 250))
+        QUIT_BUTTON = Button(image=pygame.image.load("Quit Rect.png"), pos=(200, 450),
+                             text_input="ВЫХОД", font=font, base_color="#d7fcd4", hovering_color="White")
+
+        DISPLAYSURF.blit(MENU_TEXT, MENU_RECT)
+
+        for button in [PLAY_BUTTON, QUIT_BUTTON]:
+            button.changeColor(MENU_MOUSE_POS)
+            button.update(DISPLAYSURF)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    play()
+                if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    pygame.quit()
+                    sys.exit()
 
         pygame.display.update()
-        for entity in all_sprites:
-            entity.kill()
-        time.sleep(2)
-        pygame.quit()
-        sys.exit()
 
-    pygame.display.update()
-    FramePerSec.tick(FPS)
+
+def play():
+    SPEED = 5
+    # основной цикл
+    while True:
+
+        # проходим по всем событиям, при возникновении события quit завершаем игру
+        for event in pygame.event.get():
+            if event.type == INC_SPEED:
+                SPEED += 0.5
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+
+        # отрисовываем текст используя рендер шрифта, обновляем каждый тик
+        back_ground.update()
+        back_ground.render()
+        scores = font_small.render(str(SCORE), True, BLACK)
+        DISPLAYSURF.blit(scores, (10, 10))
+
+        # перерисовываем спрайты по их перемещению
+        for entity in all_sprites:
+            DISPLAYSURF.blit(entity.image, entity.rect)
+            entity.move()
+
+        # проверяем столкновение, если столкновение произошло, проигрываем звук проигрыша и окно завершения
+        if pygame.sprite.spritecollideany(P1, enemies):
+            pygame.mixer.Sound('crash.wav').play()
+            time.sleep(0.5)
+
+            DISPLAYSURF.fill(RED)
+            DISPLAYSURF.blit(game_over, (30, 250))
+
+            pygame.display.update()
+            for entity in all_sprites:
+                entity.kill()
+            time.sleep(2)
+            main_menu()
+
+        pygame.display.update()
+        FramePerSec.tick(FPS)
+
+
+main_menu()
